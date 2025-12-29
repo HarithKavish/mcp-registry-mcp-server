@@ -1,0 +1,13 @@
+{
+  "name": "@harith/context-mcp-starter",
+  "version": "0.0.1",
+  "description": "Minimal Model Context Protocol (MCP) server starter (stdio + http transport)",
+  "bin": {
+    "context-mcp-starter": "bin/index.js"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "keywords": ["mcp","model-context-protocol","stdio","mcp-server"],
+  "license": "MIT"
+}

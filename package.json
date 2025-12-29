@@ -9,7 +9,6 @@
     "categories": [
         "Other"
     ],
-    "icon": "icon.svg",
     "repository": {
         "type": "git",
         "url": "https://github.com/HarithKavish/mcp-registry-mcp-server.git"

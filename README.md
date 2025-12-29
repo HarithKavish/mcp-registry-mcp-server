@@ -1,8 +1,11 @@
-# MCP Client VS Code Extension
+# MCP Server — VS Code Extension
 
-This repository contains the VS Code extension that integrates with an MCP registry to list available MCP servers and request installs.
+This extension provides MCP (Model Context Protocol) server tooling from inside VS Code:
+- Start and stop a local MCP server (subprocess via `npx` or local package)
+- Connect to a running MCP HTTP/stdio server
+- List registry entries and request installs from MCP registries
 
-See the top-level `vscode-extension` folder for the original working copy.
+See the `packages/mcp` minimal example for a local MCP transport implementation.
 
 To run locally:
 

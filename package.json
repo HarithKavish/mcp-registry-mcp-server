@@ -1,6 +1,7 @@
 {
     "name": "mcp-client",
-    "displayName": "MCP Client",
+    "displayName": "MCP Server — MCP Client",
+    "description": "Start, connect to, and manage MCP (Model Context Protocol) servers from VS Code. Start a local MCP server, connect to remote servers, list registry entries, and request installs.",
     "publisher": "harithkavish",
     "version": "0.0.1",
     "engines": {
@@ -20,6 +21,9 @@
     "license": "MIT",
     "keywords": [
         "mcp",
+        "model-context-protocol",
+        "ai-agent",
+        "tool-server",
         "context7"
     ],
     "activationEvents": [

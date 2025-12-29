@@ -1,5 +1,25 @@
 const vscode = require('vscode');
 const axios = require('axios');
+const child_process = require('child_process');
+const path = require('path');
+
+let serverProcess = null;
+let outputChannel = null;
+let statusBar = null;
+
+function makeOutputChannel() {
+    if (!outputChannel) outputChannel = vscode.window.createOutputChannel('MCP Server');
+    return outputChannel;
+}
+
+function updateStatus(text) {
+    if (!statusBar) {
+        statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+        statusBar.command = 'mcp.showServerLogs';
+        statusBar.show();
+    }
+    statusBar.text = text;
+}
 
 function activate(context) {
     const listCmd = vscode.commands.registerCommand('mcp.listServers', async () => {
@@ -39,6 +59,70 @@ function activate(context) {
             vscode.window.showErrorMessage('Install failed: ' + msg);
         }
     });
+
+    const startCmd = vscode.commands.registerCommand('mcp.startServer', async () => {
+        if (serverProcess) {
+            vscode.window.showInformationMessage('MCP server already running');
+            return;
+        }
+        const config = vscode.workspace.getConfiguration('mcp');
+        const port = config.get('port') || 3000;
+        const useNpx = config.get('useNpx') !== false; // default true
+
+        const args = ['-y', '@harith/context-mcp', '--transport', 'http', '--port', String(port)];
+        const cmd = useNpx ? 'npx' : 'node';
+        const cmdArgs = useNpx ? args : [path.join(context.extensionPath || process.cwd(), 'packages', 'mcp', 'index.js'), '--transport', 'http', '--port', String(port)];
+
+        try {
+            const out = makeOutputChannel();
+            out.appendLine(`Starting MCP server: ${cmd} ${cmdArgs.join(' ')}`);
+            serverProcess = child_process.spawn(cmd, cmdArgs, { shell: false });
+            serverProcess.stdout.on('data', (d) => out.appendLine(String(d)));
+            serverProcess.stderr.on('data', (d) => out.appendLine(String(d)));
+            serverProcess.on('exit', (code, sig) => {
+                out.appendLine(`MCP server exited: code=${code} sig=${sig}`);
+                serverProcess = null;
+                updateStatus('MCP: stopped');
+            });
+            updateStatus('MCP: running');
+            vscode.window.showInformationMessage('MCP server started');
+        } catch (e) {
+            vscode.window.showErrorMessage('Failed to start MCP server: ' + e.message);
+        }
+    });
+
+    const stopCmd = vscode.commands.registerCommand('mcp.stopServer', async () => {
+        if (!serverProcess) {
+            vscode.window.showInformationMessage('MCP server is not running');
+            return;
+        }
+        try {
+            serverProcess.kill();
+            serverProcess = null;
+            updateStatus('MCP: stopped');
+            vscode.window.showInformationMessage('MCP server stopped');
+        } catch (e) {
+            vscode.window.showErrorMessage('Failed to stop MCP server: ' + e.message);
+        }
+    });
+
+    const showLogsCmd = vscode.commands.registerCommand('mcp.showServerLogs', async () => {
+        const out = makeOutputChannel();
+        out.show(true);
+    });
+
+    const connectCmd = vscode.commands.registerCommand('mcp.connectServer', async () => {
+        const config = vscode.workspace.getConfiguration('mcp');
+        const serverUrl = config.get('serverUrl') || await vscode.window.showInputBox({ prompt: 'MCP server URL', value: 'http://localhost:3000/mcp' });
+        try {
+            const resp = await axios.get(serverUrl);
+            vscode.window.showInformationMessage(`MCP server: ${JSON.stringify(resp.data).slice(0,200)}`);
+        } catch (err) {
+            vscode.window.showErrorMessage('Failed to connect: ' + (err.message || String(err)));
+        }
+    });
+
+    context.subscriptions.push(startCmd, stopCmd, showLogsCmd, connectCmd);
 
     context.subscriptions.push(listCmd, installCmd);
 }

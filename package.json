@@ -24,7 +24,11 @@
     ],
     "activationEvents": [
         "onCommand:mcp.listServers",
-        "onCommand:mcp.installServer"
+        "onCommand:mcp.installServer",
+        "onCommand:mcp.startServer",
+        "onCommand:mcp.stopServer",
+        "onCommand:mcp.showServerLogs",
+        "onCommand:mcp.connectServer"
     ],
     "main": "extension.js",
     "contributes": {
@@ -36,6 +40,22 @@
             {
                 "command": "mcp.installServer",
                 "title": "MCP: Install Server"
+            },
+            {
+                "command": "mcp.startServer",
+                "title": "MCP: Start Server"
+            },
+            {
+                "command": "mcp.stopServer",
+                "title": "MCP: Stop Server"
+            },
+            {
+                "command": "mcp.showServerLogs",
+                "title": "MCP: Show Server Logs"
+            },
+            {
+                "command": "mcp.connectServer",
+                "title": "MCP: Connect to Server"
             }
         ],
         "configuration": {

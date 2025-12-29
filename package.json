@@ -67,7 +67,21 @@
                 "name": "harith-context-mcp",
                 "type": "stdio",
                 "command": "npx",
-                "args": ["-y","@harith/context-mcp","--transport","stdio"]
+                "args": [
+                    "-y",
+                    "@harith/context-mcp",
+                    "--transport",
+                    "stdio"
+                ]
+            }
+        ],
+        "mcpServers": [
+            {
+                "name": "harith-context-mcp",
+                "type": "stdio",
+                "managed": true,
+                "command": "node",
+                "args": ["${extensionPath}/packages/mcp/index.js","--transport","stdio"]
             }
         ],
         "configuration": {

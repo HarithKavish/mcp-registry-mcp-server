@@ -1,4 +1,5 @@
 packages/**
+!packages/mcp/**
 server.json
 node_modules/**
 **/*.log

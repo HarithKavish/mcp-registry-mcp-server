@@ -1,0 +1,10 @@
+packages/**
+server.json
+node_modules/**
+**/*.log
+**/.npmrc
+**/.env
+.env
+.env.*
+dist/**
+**/*.map

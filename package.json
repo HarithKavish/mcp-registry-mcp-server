@@ -75,15 +75,6 @@
                 ]
             }
         ],
-        "mcpServers": [
-            {
-                "name": "harith-context-mcp",
-                "type": "stdio",
-                "managed": true,
-                "command": "node",
-                "args": ["${extensionPath}/packages/mcp/index.js","--transport","stdio"]
-            }
-        ],
         "configuration": {
             "title": "MCP Client",
             "properties": {

@@ -49,7 +49,7 @@ if (transport === 'http') {
   });
 
   server.listen(port, () => {
-    console.log(`harith-mcp http transport listening on port ${port}`);
+    console.error(`harith-mcp http transport listening on port ${port}`);
   });
 } else {
   // stdio transport: simple JSON line protocol
@@ -76,9 +76,24 @@ if (transport === 'http') {
       }
     }
   });
-  console.log('harith-mcp stdio transport ready');
+  console.error('harith-mcp stdio transport ready');
 }
-#!/usr/bin/env node
+
+// Handle termination signals so VS Code can kill/restart reliably
+function shutdown(code = 0) {
+  try {
+    console.error('harith-mcp shutting down');
+  } catch (e) { }
+  process.exit(code);
+}
+
+process.on('SIGTERM', () => shutdown(0));
+process.on('SIGINT', () => shutdown(0));
+process.on('uncaughtException', (err) => {
+  try { console.error('unhandled exception', err && err.stack ? err.stack : String(err)); } catch (e) { }
+  shutdown(1);
+});
+#!/usr/bin / env node
 const http = require('http');
 
 function parseArgs(argv) {

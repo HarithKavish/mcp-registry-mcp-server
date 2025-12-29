@@ -1,0 +1,45 @@
+name: Build VS Code Extension
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "18"
+
+            - name: Install dependencies
+              run: |
+                  npm ci
+
+            - name: Package extension (.vsix)
+              run: |
+                  npx --yes vsce package --no-dependencies
+
+            - name: Upload VSIX artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: mcp-client-vsix
+                  path: "*.vsix"
+
+            - name: Publish to VS Code Marketplace
+              env:
+                  VSCE_PAT: ${{ secrets.VSCE_PAT }}
+              run: |
+                  # Skip publish when VSCE_PAT is not provided
+                  if [ -z "$VSCE_PAT" ]; then
+                    echo "VSCE_PAT not set — skipping publish step"
+                    exit 0
+                  fi
+                  # publish uses VSCE_PAT env var
+                  npx --yes vsce publish --no-dependencies

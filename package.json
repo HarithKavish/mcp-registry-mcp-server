@@ -1,0 +1,65 @@
+{
+    "name": "mcp-client",
+    "displayName": "MCP Client",
+    "publisher": "harithkavish",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.80.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "icon": "icon.svg",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/HarithKavish/mcp-registry-mcp-server.git"
+    },
+    "bugs": {
+        "url": "https://github.com/HarithKavish/mcp-registry-mcp-server/issues"
+    },
+    "homepage": "https://github.com/HarithKavish/mcp-registry-mcp-server",
+    "license": "MIT",
+    "keywords": [
+        "mcp",
+        "context7"
+    ],
+    "activationEvents": [
+        "onCommand:mcp.listServers",
+        "onCommand:mcp.installServer"
+    ],
+    "main": "extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "mcp.listServers",
+                "title": "MCP: List Servers"
+            },
+            {
+                "command": "mcp.installServer",
+                "title": "MCP: Install Server"
+            }
+        ],
+        "configuration": {
+            "title": "MCP Client",
+            "properties": {
+                "mcp.serverUrl": {
+                    "type": "string",
+                    "default": "https://registry.modelcontextprotocol.io/",
+                    "description": "URL of the MCP registry (HTTP server)"
+                },
+                "mcp.apiKey": {
+                    "type": "string",
+                    "default": "",
+                    "description": "API key (X-API-Key) to use for install requests"
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "echo prepublish",
+        "test": "echo no tests"
+    },
+    "dependencies": {
+        "axios": "^1.5.0"
+    }
+}

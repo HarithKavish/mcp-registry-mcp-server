@@ -116,7 +116,7 @@ function activate(context) {
         const serverUrl = config.get('serverUrl') || await vscode.window.showInputBox({ prompt: 'MCP server URL', value: 'http://localhost:3000/mcp' });
         try {
             const resp = await axios.get(serverUrl);
-            vscode.window.showInformationMessage(`MCP server: ${JSON.stringify(resp.data).slice(0,200)}`);
+            vscode.window.showInformationMessage(`MCP server: ${JSON.stringify(resp.data).slice(0, 200)}`);
         } catch (err) {
             vscode.window.showErrorMessage('Failed to connect: ' + (err.message || String(err)));
         }

@@ -5,7 +5,7 @@
     "publisher": "harithkavish",
     "version": "0.0.1",
     "engines": {
-        "vscode": "^1.80.0"
+        "vscode": "^1.90.0"
     },
     "categories": [
         "Other"
@@ -60,6 +60,14 @@
             {
                 "command": "mcp.connectServer",
                 "title": "MCP: Connect to Server"
+            }
+        ],
+        "mcpServers": [
+            {
+                "name": "harith-context-mcp",
+                "type": "stdio",
+                "command": "npx",
+                "args": ["-y","@harith/context-mcp","--transport","stdio"]
             }
         ],
         "configuration": {

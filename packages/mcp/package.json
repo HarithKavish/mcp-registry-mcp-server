@@ -1,0 +1,24 @@
+{
+  "name": "@harith/context-mcp",
+  "version": "0.0.1",
+  "description": "Minimal MCP transport wrapper (http|stdio) for registry testing",
+  "bin": {
+    "harith-mcp": "index.js"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "license": "MIT"
+}
+{
+  "name": "@harith/context-mcp",
+  "version": "0.0.1",
+  "description": "Minimal MCP transport wrapper (http|stdio) for registry testing",
+  "bin": {
+    "harith-mcp": "index.js"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "license": "MIT"
+}

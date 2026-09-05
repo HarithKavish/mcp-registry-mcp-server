@@ -4,6 +4,7 @@
     "description": "MCP server manifest for harith-context-mcp (stdio)",
     "publisher": "harithkavish",
     "version": "0.0.1",
+    "main": "./extension.js",
     "engines": {
         "vscode": "^1.90.0"
     },
@@ -19,13 +20,24 @@
     },
     "homepage": "https://github.com/HarithKavish/mcp-registry-mcp-server",
     "license": "MIT",
+    "workspaces": [
+        "packages/*"
+    ],
     "keywords": [
         "mcp",
         "model-context-protocol",
         "ai-agent",
         "tool-server",
-        "context7"
+        "context7",
+        "camera"
     ],
+    "dependencies": {
+        "axios": "^1.20.0"
+    },
+    "devDependencies": {
+        "@modelcontextprotocol/sdk": "^1.30.0",
+        "zod": "^4.5.4"
+    },
     "contributes": {
         "mcpServers": [
             {
@@ -37,6 +49,15 @@
                     "@harith/context-mcp",
                     "--transport",
                     "stdio"
+                ]
+            },
+            {
+                "name": "harith-camera-mcp",
+                "type": "stdio",
+                "command": "npx",
+                "args": [
+                    "-y",
+                    "@harith/camera-mcp"
                 ]
             }
         ]

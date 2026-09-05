@@ -1,53 +1,29 @@
-const { spawn } = require('child_process');
+// Smoke test for packages/context-mcp-starter: connects a real MCP client over stdio
+// and calls the starter's `echo` tool.
 const path = require('path');
+const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
+const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio.js');
 
-(async function () {
-    const bin = path.join(__dirname, '..', 'packages', 'context-mcp-starter', 'bin', 'index.js');
-    const child = spawn(process.execPath, [bin, '--transport', 'stdio'], { stdio: ['pipe', 'pipe', 'pipe'] });
+(async () => {
+  const bin = path.join(__dirname, '..', 'packages', 'context-mcp-starter', 'bin', 'index.js');
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [bin, '--transport', 'stdio']
+  });
 
-    let stderr = '';
-    child.stderr.on('data', d => {
-        stderr += d.toString();
-        process.stdout.write('[child-stderr] ' + d.toString());
-    });
+  const client = new Client({ name: 'test_starter_wrapper', version: '0.0.1' });
+  await client.connect(transport);
 
-    let stdout = '';
-    child.stdout.on('data', d => {
-        stdout += d.toString();
-        process.stdout.write('[child-stdout] ' + d.toString());
-    });
+  const result = await client.callTool({ name: 'echo', arguments: { text: 'hello' } });
+  const text = result.content.find((c) => c.type === 'text')?.text;
+  if (text !== 'hello') {
+    throw new Error(`expected echo to return 'hello', got: ${JSON.stringify(result)}`);
+  }
 
-    // wait for ready message on stderr
-    await new Promise((resolve, reject) => {
-        const to = setTimeout(() => reject(new Error('timeout waiting for ready')), 3000);
-        const onData = () => {
-            if (stderr.includes('stdio ready')) {
-                clearTimeout(to);
-                resolve();
-            }
-        };
-        child.stderr.on('data', onData);
-    }).catch(e => { console.error(e); child.kill(); process.exit(1); });
-
-    // send JSON request
-    const req = { id: 1, method: 'echo', params: { msg: 'hello' } };
-    child.stdin.write(JSON.stringify(req) + '\n');
-
-    // wait for response
-    await new Promise((resolve, reject) => {
-        const to = setTimeout(() => reject(new Error('timeout waiting for response')), 3000);
-        const onData = () => {
-            if (stdout.includes('"echo"')) {
-                clearTimeout(to);
-                resolve();
-            }
-        };
-        child.stdout.on('data', onData);
-    }).catch(e => { console.error(e); child.kill(); process.exit(1); });
-
-    // request shutdown
-    child.kill('SIGTERM');
-    const code = await new Promise(r => child.on('exit', r));
-    console.log('child exited with', code);
-    process.exit(code === 0 ? 0 : 1);
-})();
+  console.log('OK: context-mcp-starter echo tool round-tripped over real MCP stdio transport');
+  await client.close();
+  process.exit(0);
+})().catch((err) => {
+  console.error('FAILED:', err);
+  process.exit(1);
+});

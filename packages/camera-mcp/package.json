@@ -1,0 +1,36 @@
+{
+  "name": "@harith/camera-mcp",
+  "version": "0.1.0",
+  "description": "MCP server exposing a capture_photo tool: opens the webcam, takes one still photo, closes it, and returns the image to the calling agent.",
+  "type": "commonjs",
+  "bin": {
+    "camera-mcp": "bin/index.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "scripts",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "mcp-server",
+    "camera",
+    "webcam",
+    "ai-agent"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HarithKavish/mcp-registry-mcp-server.git",
+    "directory": "packages/camera-mcp"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.5.4"
+  }
+}

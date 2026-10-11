@@ -86,7 +86,9 @@ function activate(context) {
                 body: JSON.stringify({ server_id: serverId })
             });
             const data = await resp.json().catch(() => ({}));
-            if (!resp.ok) throw new Error(JSON.stringify(data) || `HTTP ${resp.status}`);
+            // Non-JSON error bodies (HTML 502s etc.) must surface the status, not "{}"
+            // — JSON.stringify({}) is truthy, so the old `|| HTTP n` fallback was dead.
+            if (!resp.ok) throw new Error(Object.keys(data).length ? JSON.stringify(data) : `HTTP ${resp.status}`);
             vscode.window.showInformationMessage(`Install request: ${data.status || 'accepted'}`);
         } catch (err) {
             vscode.window.showErrorMessage('Install failed: ' + (err.message || String(err)));

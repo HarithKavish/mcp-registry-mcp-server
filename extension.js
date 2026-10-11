@@ -25,7 +25,16 @@ function updateStatus(text) {
 // vscode.lm.registerMcpServerDefinitionProvider). VS Code owns spawning/lifecycle for
 // these -- this is separate from, and does not replace, the manual start/stop/connect
 // commands below, which manage the HTTP-transport variant on a user-chosen port.
+//
+// The definitions below launch `npx -y @harith/context-mcp` / `@harith/camera-mcp`,
+// which only resolves once those packages are published to npm. Until that happens the
+// registration is opt-in (`mcp.registerNpmServers`: false by default) so a Marketplace
+// build does not register servers that fail on every start.
 function registerMcpProvider(context) {
+    if (vscode.workspace.getConfiguration('mcp').get('registerNpmServers') !== true) {
+        return;
+    }
+
     const provider = {
         provideMcpServerDefinitions: async () => [
             new vscode.McpStdioServerDefinition(
@@ -55,11 +64,13 @@ function activate(context) {
         try {
             const resp = await fetch(serverUrl);
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            const data = await resp.json();
+            const data = await resp.json().catch(() => (null));
+            // A null or non-object body (some registries return literal `null`) must
+            // degrade to an empty list, not a TypeError from data.servers below.
             let items = [];
             if (Array.isArray(data)) items = data;
-            else if (data.servers) items = data.servers;
-            else if (data.items) items = data.items;
+            else if (data && data.servers) items = data.servers;
+            else if (data && data.items) items = data.items;
 
             const picks = items.map(i => ({ label: i.name || i.id || JSON.stringify(i), description: i.description || '' }));
             const pick = await vscode.window.showQuickPick(picks, { placeHolder: 'Select server to inspect' });
@@ -86,10 +97,14 @@ function activate(context) {
                 body: JSON.stringify({ server_id: serverId })
             });
             const data = await resp.json().catch(() => ({}));
-            // Non-JSON error bodies (HTML 502s etc.) must surface the status, not "{}"
-            // — JSON.stringify({}) is truthy, so the old `|| HTTP n` fallback was dead.
-            if (!resp.ok) throw new Error(Object.keys(data).length ? JSON.stringify(data) : `HTTP ${resp.status}`);
-            vscode.window.showInformationMessage(`Install request: ${data.status || 'accepted'}`);
+            // Non-JSON error bodies (HTML 502s etc.) must surface the status, not "{}".
+            // JSON.stringify({}) is truthy, so `|| HTTP n` was dead; and `resp.json()`
+            // can also resolve to null or a primitive ("oops") without throwing, which
+            // made Object.keys(data) a TypeError. Only a non-empty plain object is
+            // worth stringifying -- anything else falls back to the status code.
+            const hasBody = data && typeof data === 'object' && Object.keys(data).length > 0;
+            if (!resp.ok) throw new Error(hasBody ? JSON.stringify(data) : `HTTP ${resp.status}`);
+            vscode.window.showInformationMessage(`Install request: ${data?.status || 'accepted'}`);
         } catch (err) {
             vscode.window.showErrorMessage('Install failed: ' + (err.message || String(err)));
         }

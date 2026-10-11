@@ -1,5 +1,4 @@
 const vscode = require('vscode');
-const axios = require('axios');
 const child_process = require('child_process');
 const path = require('path');
 
@@ -21,17 +20,57 @@ function updateStatus(text) {
     statusBar.text = text;
 }
 
+// Registers this extension's bundled tools with VS Code's MCP client via the real
+// contribution point (contributes.mcpServerDefinitionProviders +
+// vscode.lm.registerMcpServerDefinitionProvider). VS Code owns spawning/lifecycle for
+// these -- this is separate from, and does not replace, the manual start/stop/connect
+// commands below, which manage the HTTP-transport variant on a user-chosen port.
+//
+// The definitions below launch `npx -y @harith/context-mcp` / `@harith/camera-mcp`,
+// which only resolves once those packages are published to npm. Until that happens the
+// registration is opt-in (`mcp.registerNpmServers`: false by default) so a Marketplace
+// build does not register servers that fail on every start.
+function registerMcpProvider(context) {
+    if (vscode.workspace.getConfiguration('mcp').get('registerNpmServers') !== true) {
+        return;
+    }
+
+    const provider = {
+        provideMcpServerDefinitions: async () => [
+            new vscode.McpStdioServerDefinition(
+                'harith-context-mcp',
+                'npx',
+                ['-y', '@harith/context-mcp', '--transport', 'stdio']
+            ),
+            new vscode.McpStdioServerDefinition(
+                'harith-camera-mcp',
+                'npx',
+                ['-y', '@harith/camera-mcp']
+            )
+        ]
+    };
+
+    context.subscriptions.push(
+        vscode.lm.registerMcpServerDefinitionProvider('harithMcpTools', provider)
+    );
+}
+
 function activate(context) {
+    registerMcpProvider(context);
+
     const listCmd = vscode.commands.registerCommand('mcp.listServers', async () => {
         const config = vscode.workspace.getConfiguration('mcp');
         const serverUrl = config.get('serverUrl') || await vscode.window.showInputBox({ prompt: 'MCP server URL', value: 'https://registry.modelcontextprotocol.io/' });
         try {
-            const resp = await axios.get(serverUrl);
-            const data = resp.data;
+            const resp = await fetch(serverUrl);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json().catch(() => (null));
+            // A null or non-object body (some registries return literal `null`) must
+            // degrade to an empty list, not a TypeError from data.servers below.
             let items = [];
             if (Array.isArray(data)) items = data;
-            else if (data.servers) items = data.servers;
-            else if (data.items) items = data.items;
+            else if (data && data.servers) items = data.servers;
+            else if (data && data.items) items = data.items;
 
             const picks = items.map(i => ({ label: i.name || i.id || JSON.stringify(i), description: i.description || '' }));
             const pick = await vscode.window.showQuickPick(picks, { placeHolder: 'Select server to inspect' });
@@ -52,11 +91,22 @@ function activate(context) {
 
         try {
             const installUrl = serverUrl.replace(/\/$/, '') + '/install';
-            const resp = await axios.post(installUrl, { server_id: serverId }, { headers: { 'X-API-Key': apiKey } });
-            vscode.window.showInformationMessage(`Install request: ${resp.data.status || 'accepted'}`);
+            const resp = await fetch(installUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
+                body: JSON.stringify({ server_id: serverId })
+            });
+            const data = await resp.json().catch(() => ({}));
+            // Non-JSON error bodies (HTML 502s etc.) must surface the status, not "{}".
+            // JSON.stringify({}) is truthy, so `|| HTTP n` was dead; and `resp.json()`
+            // can also resolve to null or a primitive ("oops") without throwing, which
+            // made Object.keys(data) a TypeError. Only a non-empty plain object is
+            // worth stringifying -- anything else falls back to the status code.
+            const hasBody = data && typeof data === 'object' && Object.keys(data).length > 0;
+            if (!resp.ok) throw new Error(hasBody ? JSON.stringify(data) : `HTTP ${resp.status}`);
+            vscode.window.showInformationMessage(`Install request: ${data?.status || 'accepted'}`);
         } catch (err) {
-            const msg = err.response && err.response.data ? JSON.stringify(err.response.data) : (err.message || String(err));
-            vscode.window.showErrorMessage('Install failed: ' + msg);
+            vscode.window.showErrorMessage('Install failed: ' + (err.message || String(err)));
         }
     });
 
@@ -115,8 +165,10 @@ function activate(context) {
         const config = vscode.workspace.getConfiguration('mcp');
         const serverUrl = config.get('serverUrl') || await vscode.window.showInputBox({ prompt: 'MCP server URL', value: 'http://localhost:3000/mcp' });
         try {
-            const resp = await axios.get(serverUrl);
-            vscode.window.showInformationMessage(`MCP server: ${JSON.stringify(resp.data).slice(0, 200)}`);
+            const resp = await fetch(serverUrl);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            vscode.window.showInformationMessage(`MCP server: ${JSON.stringify(data).slice(0, 200)}`);
         } catch (err) {
             vscode.window.showErrorMessage('Failed to connect: ' + (err.message || String(err)));
         }

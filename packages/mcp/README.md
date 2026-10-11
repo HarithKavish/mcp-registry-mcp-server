@@ -1,52 +1,23 @@
-# @harith/context-mcp (minimal)
+# @harith/context-mcp
 
-This package provides a minimal MCP transport wrapper for testing registry integration.
+A real MCP server (built on `@modelcontextprotocol/sdk`) exposing `echo` and
+`server_info` tools, used to verify the MCP transport end-to-end. Speak to it with any
+MCP client, not with raw `curl`/JSON lines -- both transports below are real JSON-RPC
+2.0 over the standard MCP wire format.
 
-Usage (http):
+Usage (stdio -- what VS Code and other MCP clients use):
 
 ```bash
-# start HTTP transport on port 3000
-node index.js --transport http --port 3000 --api-key MYKEY
+node index.js --transport stdio
 # or via npx (when published):
-npx -y @harith/context-mcp --transport http --port 3000 --api-key MYKEY
+npx -y @harith/context-mcp --transport stdio
 ```
 
-Request:
-
-```
-curl -H "x-api-key: MYKEY" http://localhost:3000/mcp
-```
-
-Usage (stdio):
+Usage (http -- Streamable HTTP transport):
 
 ```bash
-node index.js --transport stdio --api-key MYKEY
-# send JSON lines to stdin and receive JSON lines on stdout
-echo '{"query":"info","apiKey":"MYKEY"}' | node index.js --transport stdio
-```
-# @harith/context-mcp (minimal)
-
-This package provides a minimal MCP transport wrapper for testing registry integration.
-
-Usage (http):
-
-```bash
-# start HTTP transport on port 3000
 node index.js --transport http --port 3000 --api-key MYKEY
-# or via npx (when published):
-npx -y @harith/context-mcp --transport http --port 3000 --api-key MYKEY
 ```
 
-Request:
-
-```
-curl -H "x-api-key: MYKEY" http://localhost:3000/mcp
-```
-
-Usage (stdio):
-
-```bash
-node index.js --transport stdio --api-key MYKEY
-# send JSON lines to stdin and receive JSON lines on stdout
-echo '{"query":"info","apiKey":"MYKEY"}' | node index.js --transport stdio
-```
+Connect with an MCP client (e.g. the SDK's `StreamableHTTPClientTransport`) at
+`http://localhost:3000/mcp`, sending `x-api-key: MYKEY` or `Authorization: Bearer MYKEY`.

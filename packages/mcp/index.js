@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 const http = require('http');
+const { z } = require('zod');
+const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
+const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
+const { StreamableHTTPServerTransport } = require('@modelcontextprotocol/sdk/server/streamableHttp.js');
+
+const NAME = 'harith-context-mcp';
+const VERSION = require('./package.json').version;
 
 function parseArgs(argv) {
   const out = {};
@@ -14,9 +21,37 @@ function parseArgs(argv) {
 }
 
 const argv = parseArgs(process.argv.slice(2));
-const transport = (argv.transport || 'stdio');
+const transportKind = argv.transport || 'stdio';
 const port = parseInt(argv.port || process.env.PORT || '3000', 10);
 const apiKey = argv['api-key'] || process.env.CONTEXT7_API_KEY || null;
+
+function buildServer() {
+  const server = new McpServer({ name: NAME, version: VERSION });
+
+  server.registerTool(
+    'echo',
+    {
+      title: 'Echo',
+      description: 'Echoes back whatever text is sent to it. Used to verify the MCP transport is wired up correctly.',
+      inputSchema: { text: z.string().describe('Text to echo back') }
+    },
+    async ({ text }) => ({ content: [{ type: 'text', text }] })
+  );
+
+  server.registerTool(
+    'server_info',
+    {
+      title: 'Server info',
+      description: 'Returns this server\'s name, version, and active transport.',
+      inputSchema: {}
+    },
+    async () => ({
+      content: [{ type: 'text', text: JSON.stringify({ name: NAME, version: VERSION, transport: transportKind }) }]
+    })
+  );
+
+  return server;
+}
 
 function checkApiKeyHeader(req) {
   if (!apiKey) return true;
@@ -26,71 +61,46 @@ function checkApiKeyHeader(req) {
   return header === apiKey;
 }
 
-if (transport === 'http') {
-  const server = http.createServer((req, res) => {
-    if (req.url === '/mcp') {
-      if (!checkApiKeyHeader(req)) {
-        res.writeHead(401, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'unauthorized' }));
-        return;
-      }
-      const body = {
-        ok: true,
-        name: 'harith-context-mcp',
-        transport: 'http',
-        version: '0.0.1'
-      };
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(body));
+async function runStdio() {
+  const server = buildServer();
+  await server.connect(new StdioServerTransport());
+  console.error(`${NAME} stdio transport ready`);
+}
+
+function runHttp() {
+  const server = buildServer();
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+  server.connect(transport);
+
+  const httpServer = http.createServer((req, res) => {
+    if (req.url !== '/mcp') {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('not found');
       return;
     }
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('not found');
-  });
-
-  server.listen(port, () => {
-    console.error(`harith-mcp http transport listening on port ${port}`);
-  });
-} else {
-  // stdio transport: simple JSON line protocol
-  process.stdin.setEncoding('utf8');
-  let buf = '';
-  process.stdin.on('data', (chunk) => {
-    buf += chunk;
-    let idx;
-    while ((idx = buf.indexOf('\n')) !== -1) {
-      const line = buf.slice(0, idx).trim();
-      buf = buf.slice(idx + 1);
-      if (!line) continue;
-      try {
-        const msg = JSON.parse(line);
-        if (apiKey && msg.apiKey && msg.apiKey !== apiKey) {
-          process.stdout.write(JSON.stringify({ error: 'unauthorized' }) + '\n');
-          continue;
-        }
-        // Echo minimal MCP response
-        const resp = { ok: true, name: 'harith-context-mcp', transport: 'stdio', echo: msg };
-        process.stdout.write(JSON.stringify(resp) + '\n');
-      } catch (e) {
-        process.stdout.write(JSON.stringify({ error: 'invalid_json' }) + '\n');
-      }
+    if (!checkApiKeyHeader(req)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'unauthorized' }));
+      return;
     }
+    transport.handleRequest(req, res);
   });
-  console.error('harith-mcp stdio transport ready');
+
+  httpServer.listen(port, () => {
+    console.error(`${NAME} http transport listening on port ${port}`);
+  });
+
+  process.on('SIGTERM', () => httpServer.close(() => process.exit(0)));
+  process.on('SIGINT', () => httpServer.close(() => process.exit(0)));
 }
 
-// Handle termination signals so VS Code can kill/restart reliably
-function shutdown(code = 0) {
-  try {
-    console.error('harith-mcp shutting down');
-  } catch (e) { }
-  process.exit(code);
+if (transportKind === 'http') {
+  runHttp();
+} else {
+  runStdio();
 }
 
-process.on('SIGTERM', () => shutdown(0));
-process.on('SIGINT', () => shutdown(0));
 process.on('uncaughtException', (err) => {
-  try { console.error('unhandled exception', err && err.stack ? err.stack : String(err)); } catch (e) { }
-  shutdown(1);
+  console.error('unhandled exception', err && err.stack ? err.stack : String(err));
+  process.exit(1);
 });
-

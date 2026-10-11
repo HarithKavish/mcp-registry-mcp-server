@@ -1,23 +1,25 @@
 # context-mcp-starter
 
-Minimal MCP server starter supporting `stdio` and `http` transports.
+Starter template for a real MCP server (`@modelcontextprotocol/sdk`, stdio + http
+transport). Copy this package to scaffold a new tool in this repository: rename it,
+replace the `echo` tool in `bin/index.js` with your own via `server.registerTool(...)`,
+and update `package.json`'s `name`/`description`/`bin`.
 
 Usage:
 
-StdIO (suitable for VS Code MCP lifecycle):
+StdIO (suitable for VS Code's MCP lifecycle):
 
 ```
 node ./bin/index.js --transport stdio
 ```
 
-HTTP:
+HTTP (Streamable HTTP transport):
 
 ```
 node ./bin/index.js --transport http --port 8080 --api-key secret
-curl -X POST http://localhost:8080/mcp -H 'Content-Type: application/json' -d '{"method":"info"}'
 ```
 
 Behavior for VS Code lifecycle:
 - writes readiness and logs to stderr only
-- reads newline-delimited JSON from stdin and writes JSON responses to stdout
+- speaks real MCP (JSON-RPC 2.0) on stdin/stdout, not a custom line protocol
 - handles SIGTERM/SIGINT gracefully

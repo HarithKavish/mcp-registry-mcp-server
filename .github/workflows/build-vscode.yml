@@ -2,9 +2,9 @@ name: Build VS Code Extension
 
 on:
     push:
-        branches: [main]
+        branches: [development, runway, main]
     pull_request:
-        branches: [main]
+        branches: [development, runway, main]
 
 jobs:
     build:
@@ -39,6 +39,10 @@ jobs:
                   path: "*.vsix"
 
             - name: Publish to VS Code Marketplace
+              # Publishing is a release act: it must only happen from main, the
+              # branch that has passed review and both promotions. Builds on
+              # development and runway package and upload the VSIX artifact only.
+              if: github.ref == 'refs/heads/main' && github.event_name == 'push'
               env:
                   VSCE_PAT: ${{ secrets.VSCE_PAT }}
               run: |

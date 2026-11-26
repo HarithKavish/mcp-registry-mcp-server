@@ -1,0 +1,45 @@
+name: Release
+
+# A version tag (v0.1.0) packages the extension and publishes it as a GitHub release with the
+# .vsix attached, so anyone who installs it can tell which version they have and fetch it again
+# later (standards/DEPLOYMENT.md, Releases and Artifacts). "Build VS Code Extension" still builds
+# every push to main; its artifact expires, a release does not.
+#
+# The tag must match package.json's version and point at a commit on main.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+      - name: Check the tag
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json's version, $version."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$GITHUB_REF_NAME is not on main. Releases are cut from main only."
+            exit 1
+          fi
+      - run: npm ci
+      - name: Package the extension
+        run: npx --yes @vscode/vsce@4.1.0 package --no-dependencies
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" ./*.vsix --verify-tag --title "$GITHUB_REF_NAME" --generate-notes
